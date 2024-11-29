@@ -4,8 +4,28 @@ class Post < ApplicationRecord
   validates :title, length: { maximum: 32 }, presence: true
 
   validate :validates_content_length
+  validate :validates_content_attachment_byte_size
 
   MAX_CONTENT_LENGTH = 50
+  ONE_MEGABYTE = 1024
+  MEGA_BYTE = 3
+  MAX_CONTENT_ATTACHMENT_BYTE_SIZE = MEGA_BYTE * 1_000 * ONE_MEGABYTE
+
+  private
+
+  def validates_content_attachment_byte_size
+    content.body.attachables.grep(ActiveStorage::Blob).each do |attachable|
+      if attachable.byte_size > MAX_CONTENT_ATTACHMENT_BYTE_SIZE
+        errors.add(
+          :base,
+          :content_attachment_byte_size_is_too_big,
+          max_content_attachment_mega_byte_size: MEGA_BYTE,
+          byte_size: attachable.byte_size,  # ここを修正
+          max_bytes: MAX_CONTENT_ATTACHMENT_BYTE_SIZE
+        )
+      end
+    end
+  end
 
   def validates_content_length
     length = content.to_plain_text.length
